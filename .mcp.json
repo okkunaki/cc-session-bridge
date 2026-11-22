@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cc-bridge": {
+      "command": "node",
+      "args": ["./dist/index.js"]
+    }
+  }
+}
