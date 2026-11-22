@@ -129,3 +129,22 @@
   - v2 は新しい protocolVersion（2026-07-28 spec）に対応し、`serveStdio`（新旧プロトコル世代を扱うファクトリ方式）が新設されている。現状は v1 と同じ `server.connect()` 方式で動いており、`serveStdio` には移していない。新しい protocolVersion のクライアントが接続したときの挙動は未検証。
   - `StdioServerTransport` は stdin の EOF で自分で閉じる（型定義のコメントより）。v1 との差異かは未確認。
   - Claude Code（VSCode 拡張）からの実接続は、まだ確認していない。
+
+## D-012: 状態名は「主語 + 動作」で付ける
+- 日付: 2026-11-22
+- 状態: 確定（名前のみ。4状態の構成を採るかは、`docs/state-design.html` の T1 で確認中）
+- 決定: 状態名を次のとおりとする。
+
+| 状態の意味 | 状態名 | 仕様書の名前 |
+| :--- | :--- | :--- |
+| タスクなし | `idle` | `idle` |
+| 指示が届き、Builder が未受領 | `awaiting_builder_pickup` | `waiting_builder` |
+| Builder が実装中 | `builder_working` | （なし。T1 で追加を提案） |
+| 報告が届き、Architect が未受領 | `awaiting_architect_pickup` | `waiting_architect` |
+
+- 理由:
+  - 仕様書の `waiting_builder` と `waiting_architect` は、主語が「待つ側」か「待たれる側」かを名前から判別できない。実際にブロックして待っている人（待機中のツール呼び出し）と、名前が指す人もずれる。
+  - 状態名は `state.json`、エラー応答、ログに出る。読んだだけで意味が分かることを優先し、主語と動作を名前に入れる。長さは機械が読む名前なので許容する。
+- 検討した案: 仕様書のまま（主語の役割が曖昧）、荷物ベース（`task_sent`、`report_sent`。誰の番かが名前に出ない）、受信箱（`builder_inbox`、`architect_inbox`。直感性が人によって分かれる）。
+- 補足: `awaiting` は「〜を待っている」（他動詞 await の現在分詞）、`pickup` は「受け取り」（名詞）。`awaiting_builder_pickup` は「Builder による受け取りを待っている」の意味になる。
+- 注意: `docs/spec.md` の状態名とは異なる。`docs/spec.md` は更新していない。

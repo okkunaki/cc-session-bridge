@@ -103,11 +103,11 @@
   .why p { max-width: 72ch; }
 
   .diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
-  .diagram svg { display: block; min-width: 700px; width: 100%; height: auto; }
+  .diagram svg { display: block; min-width: 920px; width: 100%; height: auto; }
   svg text { font-family: var(--font-body); }
   .st { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
   .st.add { stroke: var(--warn); stroke-width: 2.5; fill: var(--warn-soft); }
-  .name { font-family: var(--font-mono); font-size: 15px; font-weight: 500; fill: var(--fg); text-anchor: middle; }
+  .name { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; fill: var(--fg); text-anchor: middle; }
   .sub { font-size: 12px; fill: var(--muted); text-anchor: middle; }
   .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
   .arrow.add { stroke: var(--warn); stroke-width: 2; marker-end: url(#aw); }
@@ -142,7 +142,7 @@
       <table>
         <thead><tr><th>論点</th><th>決める内容</th><th>推奨</th><th>状態</th></tr></thead>
         <tbody>
-          <tr><td class="k"><a href="#t1">T1</a></td><td>状態の種類と遷移</td><td>A: 4状態（<span class="mono">in_progress</span> と <span class="mono">idle</span> への戻りを追加）</td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t1">T1</a></td><td>状態の種類と遷移</td><td>A: 4状態（<span class="mono">builder_working</span> と <span class="mono">idle</span> への戻りを追加）</td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t2">T2</a></td><td>不正な順序で呼ばれたときの扱い</td><td>A: エラーを返し、現在の状態と次の手を伝える</td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t3">T3</a></td><td>実装中に Esc で止められたときの復帰</td><td>A: 再開できる設計。中止操作は Phase 2</td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t4">T4</a></td><td><span class="mono">channel_id</span> とディレクトリ構成</td><td>C: ツール引数で指定。省略時は <span class="mono">default</span></td><td><span class="chip now">今決める</span></td></tr>
@@ -171,48 +171,49 @@
     <div class="ask">
       <h3>決める点</h3>
       <ul>
-        <li>仕様書の3状態に <span class="mono">in_progress</span> を足すか。</li>
+        <li>仕様書の3状態に <span class="mono">builder_working</span> を足すか。</li>
         <li>報告を受け取ったあと、<span class="mono">idle</span> に戻すか。</li>
       </ul>
     </div>
 
     <p>仕様書の状態は <span class="mono">idle</span>、<span class="mono">waiting_builder</span>、<span class="mono">waiting_architect</span> の3つで、戻りの遷移は書かれていない。次の図は、4状態にした場合の遷移で、仕様書にない追加分を黄色で示している。</p>
+    <p><b>状態名は決定済み（<span class="id">D-012</span>）。</b>主語と動作を名前に入れる。仕様書の <span class="mono">waiting_builder</span> は <span class="mono">awaiting_builder_pickup</span>、<span class="mono">waiting_architect</span> は <span class="mono">awaiting_architect_pickup</span> に対応し、追加する実装中の状態は <span class="mono">builder_working</span> とする。<span class="mono">awaiting ... pickup</span> は「（指示や報告が）〜による受け取りを待っている」の意味。</p>
 
     <ul class="legend">
       <li><span class="sw"></span>仕様書にある</li>
       <li><span class="sw add"></span>仕様書にない追加</li>
     </ul>
     <div class="diagram">
-      <svg viewBox="0 0 830 190" role="img" aria-label="idle から waiting_builder、in_progress、waiting_architect を経て idle に戻る4状態の遷移図">
+      <svg viewBox="0 0 1020 190" role="img" aria-label="idle から awaiting_builder_pickup、builder_working、awaiting_architect_pickup を経て idle に戻る4状態の遷移図">
         <defs>
           <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
           <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--warn)"/></marker>
         </defs>
 
-        <rect class="st" x="20" y="80" width="160" height="64" rx="10"/>
-        <text class="name" x="100" y="108">idle</text>
-        <text class="sub" x="100" y="128">タスクなし</text>
+        <rect class="st" x="20" y="80" width="200" height="64" rx="10"/>
+        <text class="name" x="120" y="108">idle</text>
+        <text class="sub" x="120" y="128">タスクなし</text>
 
-        <rect class="st" x="230" y="80" width="160" height="64" rx="10"/>
-        <text class="name" x="310" y="108">waiting_builder</text>
-        <text class="sub" x="310" y="128">指示が届いている</text>
+        <rect class="st" x="280" y="80" width="200" height="64" rx="10"/>
+        <text class="name" x="380" y="108">awaiting_builder_pickup</text>
+        <text class="sub" x="380" y="128">指示が届いている</text>
 
-        <rect class="st add" x="440" y="80" width="160" height="64" rx="10"/>
-        <text class="name" x="520" y="108">in_progress</text>
-        <text class="sub" x="520" y="128">Builder が実装中</text>
+        <rect class="st add" x="540" y="80" width="200" height="64" rx="10"/>
+        <text class="name" x="640" y="108">builder_working</text>
+        <text class="sub" x="640" y="128">Builder が実装中</text>
 
-        <rect class="st" x="650" y="80" width="160" height="64" rx="10"/>
-        <text class="name" x="730" y="108">waiting_architect</text>
-        <text class="sub" x="730" y="128">報告が届いている</text>
+        <rect class="st" x="800" y="80" width="200" height="64" rx="10"/>
+        <text class="name" x="900" y="108">awaiting_architect_pickup</text>
+        <text class="sub" x="900" y="128">報告が届いている</text>
 
-        <path class="arrow" d="M182 112 H228"/>
-        <circle class="num" cx="205" cy="112" r="11"/><text class="numt" x="205" y="112">1</text>
-        <path class="arrow add" d="M392 112 H438"/>
-        <circle class="num add" cx="415" cy="112" r="11"/><text class="numt" x="415" y="112">2</text>
-        <path class="arrow" d="M602 112 H648"/>
-        <circle class="num" cx="625" cy="112" r="11"/><text class="numt" x="625" y="112">3</text>
-        <path class="arrow add" d="M730 78 C730 16 100 16 100 78"/>
-        <circle class="num add" cx="415" cy="34" r="11"/><text class="numt" x="415" y="34">4</text>
+        <path class="arrow" d="M222 112 H278"/>
+        <circle class="num" cx="250" cy="112" r="11"/><text class="numt" x="250" y="112">1</text>
+        <path class="arrow add" d="M482 112 H538"/>
+        <circle class="num add" cx="510" cy="112" r="11"/><text class="numt" x="510" y="112">2</text>
+        <path class="arrow" d="M742 112 H798"/>
+        <circle class="num" cx="770" cy="112" r="11"/><text class="numt" x="770" y="112">3</text>
+        <path class="arrow add" d="M900 78 C900 16 120 16 120 78"/>
+        <circle class="num add" cx="510" cy="34" r="11"/><text class="numt" x="510" y="34">4</text>
       </svg>
     </div>
 
@@ -220,10 +221,10 @@
       <table>
         <thead><tr><th>#</th><th>ツール</th><th>呼ぶ側</th><th>事前の状態</th><th>事後の状態</th><th>保存するもの</th></tr></thead>
         <tbody>
-          <tr><td class="k">1</td><td class="k">dispatch_to_builder</td><td>Architect</td><td class="k">idle</td><td class="k">waiting_builder</td><td class="muted">指示書、<span class="mono">turn_count</span> を +1</td></tr>
-          <tr><td class="k">2</td><td class="k">await_architect_task</td><td>Builder</td><td class="k">waiting_builder</td><td class="k">in_progress</td><td class="muted">指示を返す（受け取りの記録 = claim）</td></tr>
-          <tr><td class="k">3</td><td class="k">report_to_architect</td><td>Builder</td><td class="k">in_progress</td><td class="k">waiting_architect</td><td class="muted">報告書</td></tr>
-          <tr><td class="k">4</td><td class="k">await_builder_result</td><td>Architect</td><td class="k">waiting_architect</td><td class="k">idle</td><td class="muted">報告を返す（受け取りの記録）</td></tr>
+          <tr><td class="k">1</td><td class="k">dispatch_to_builder</td><td>Architect</td><td class="k">idle</td><td class="k">awaiting_builder_pickup</td><td class="muted">指示書、<span class="mono">turn_count</span> を +1</td></tr>
+          <tr><td class="k">2</td><td class="k">await_architect_task</td><td>Builder</td><td class="k">awaiting_builder_pickup</td><td class="k">builder_working</td><td class="muted">指示を返す（受け取りの記録 = claim）</td></tr>
+          <tr><td class="k">3</td><td class="k">report_to_architect</td><td>Builder</td><td class="k">builder_working</td><td class="k">awaiting_architect_pickup</td><td class="muted">報告書</td></tr>
+          <tr><td class="k">4</td><td class="k">await_builder_result</td><td>Architect</td><td class="k">awaiting_architect_pickup</td><td class="k">idle</td><td class="muted">報告を返す（受け取りの記録）</td></tr>
         </tbody>
       </table>
     </div>
@@ -232,8 +233,8 @@
     <div class="opts">
       <div class="opt rec">
         <div class="head"><span class="letter">A</span><span class="title">4状態にする</span><span class="badge">推奨</span></div>
-        <p>上の図のとおり、<span class="mono">in_progress</span> を追加し、報告の受け取りで <span class="mono">idle</span> に戻す。</p>
-        <p class="pro">Builder が指示を受け取った事実が記録される。2つの Builder が待っていても、指示は1回だけ渡る。Esc で止められたとき、状態が <span class="mono">in_progress</span> のまま残るので、「途中で止まった」と判別できる（T3）。</p>
+        <p>上の図のとおり、<span class="mono">builder_working</span> を追加し、報告の受け取りで <span class="mono">idle</span> に戻す。</p>
+        <p class="pro">Builder が指示を受け取った事実が記録される。2つの Builder が待っていても、指示は1回だけ渡る。Esc で止められたとき、状態が <span class="mono">builder_working</span> のまま残るので、「途中で止まった」と判別できる（T3）。</p>
         <p class="con">仕様書より状態が1つ増える。</p>
       </div>
       <div class="opt">
@@ -244,7 +245,7 @@
       </div>
       <div class="opt">
         <div class="head"><span class="letter">C</span><span class="title">4状態を Phase 2 に回す</span></div>
-        <p>MVP は B で作り、あとから <span class="mono">in_progress</span> を足す。</p>
+        <p>MVP は B で作り、あとから <span class="mono">builder_working</span> を足す。</p>
         <p class="pro">最初の実装が小さい。</p>
         <p class="con">状態遷移の検証は後付けが難しい（D-007）。あとで遷移表を作り直すことになる。</p>
       </div>
@@ -293,7 +294,7 @@
 <pre>{
   "status": "error",
   "code": "invalid_state",
-  "current_state": "in_progress",
+  "current_state": "builder_working",
   "message": "Builder が実装中のため、新しい指示は送れません。",
   "hint": "await_builder_result で報告を待つか、人間に確認してください。"
 }</pre>
@@ -316,12 +317,12 @@
       </ul>
     </div>
 
-    <p>このとき、状態は <span class="mono">in_progress</span> のまま残る。Architect は <span class="mono">await_builder_result</span> で待ち続ける。サーバーは、Builder が止まったことを知る手段がない。T1 の A なら、この状況を「<span class="mono">in_progress</span> のまま動いていない」として扱える。</p>
+    <p>このとき、状態は <span class="mono">builder_working</span> のまま残る。Architect は <span class="mono">await_builder_result</span> で待ち続ける。サーバーは、Builder が止まったことを知る手段がない。T1 の A なら、この状況を「<span class="mono">builder_working</span> のまま動いていない」として扱える。</p>
 
     <div class="opts">
       <div class="opt rec">
         <div class="head"><span class="letter">A</span><span class="title">再開できるようにする</span><span class="badge">推奨</span></div>
-        <p>状態は <span class="mono">in_progress</span> のまま残す。人間が Builder に「続けて」と伝え、Builder が <span class="mono">await_architect_task</span> を呼ぶと、同じ指示が再度返る（<span class="mono">status: "resumed"</span>）。中止の操作は Phase 2 で作る。</p>
+        <p>状態は <span class="mono">builder_working</span> のまま残す。人間が Builder に「続けて」と伝え、Builder が <span class="mono">await_architect_task</span> を呼ぶと、同じ指示が再度返る（<span class="mono">status: "resumed"</span>）。中止の操作は Phase 2 で作る。</p>
         <p class="pro">MVP の実装が小さい。Esc のあとに、作業を続ける通常の流れが成立する。</p>
         <p class="con">作業をやめたいときは、<span class="mono">state.json</span> を手で編集する必要がある。</p>
       </div>
@@ -333,7 +334,7 @@
       </div>
       <div class="opt">
         <div class="head"><span class="letter">C</span><span class="title">一定時間で自動的に中止する</span></div>
-        <p><span class="mono">in_progress</span> が一定時間更新されなければ、自動で中止扱いにする。</p>
+        <p><span class="mono">builder_working</span> が一定時間更新されなければ、自動で中止扱いにする。</p>
         <p class="pro">人間が何もしなくても復帰する。</p>
         <p class="con">長い実装が、正当な作業中に中止される。実装中は更新が出ないので、時間の基準を決められない。</p>
       </div>
@@ -343,7 +344,7 @@
       <div class="ask">
         <h3>Esc で止められる場所による違い</h3>
         <ul>
-          <li><b>Builder が実装中</b>: 本論点。状態は <span class="mono">in_progress</span> のまま残る。</li>
+          <li><b>Builder が実装中</b>: 本論点。状態は <span class="mono">builder_working</span> のまま残る。</li>
           <li><b>Architect が待機中</b>: 状態は影響を受けない。あとで Builder の報告が届き、Architect が <span class="mono">await_builder_result</span> を呼べば受け取れる。</li>
           <li><b>Builder が待機中</b>（<span class="mono">idle</span> のまま）: 待機が中断されるだけで、状態は変わらない。</li>
         </ul>
@@ -576,9 +577,9 @@
   "current": null,
   "updated_at": "2026-11-22T00:00:00.000Z"
 }</pre>
-      <pre>// status が in_progress のとき
+      <pre>// status が builder_working のとき
 {
-  "status": "in_progress",
+  "status": "builder_working",
   "revision": 6,
   "turn_count": 3,
   "current": {
