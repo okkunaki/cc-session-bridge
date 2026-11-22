@@ -222,10 +222,10 @@
       <table>
         <thead><tr><th>#</th><th>ツール</th><th>呼ぶ側</th><th>事前の状態</th><th>事後の状態</th><th>保存するもの</th></tr></thead>
         <tbody>
-          <tr><td class="k">1</td><td class="k">dispatch_to_builder</td><td>Architect</td><td class="k">idle</td><td class="k">awaiting_builder_pickup</td><td class="muted">指示書、<span class="mono">turn_count</span> を +1</td></tr>
-          <tr><td class="k">2</td><td class="k">await_architect_task</td><td>Builder</td><td class="k">awaiting_builder_pickup</td><td class="k">builder_working</td><td class="muted">指示を返す（受け取りの記録 = claim）</td></tr>
-          <tr><td class="k">3</td><td class="k">report_to_architect</td><td>Builder</td><td class="k">builder_working</td><td class="k">awaiting_architect_pickup</td><td class="muted">報告書</td></tr>
-          <tr><td class="k">4</td><td class="k">await_builder_result</td><td>Architect</td><td class="k">awaiting_architect_pickup</td><td class="k">idle</td><td class="muted">報告を返す（受け取りの記録）</td></tr>
+          <tr><td class="k">1</td><td class="k">send_plan_to_builder</td><td>Architect</td><td class="k">idle</td><td class="k">awaiting_builder_pickup</td><td class="muted">指示書、<span class="mono">turn_count</span> を +1</td></tr>
+          <tr><td class="k">2</td><td class="k">wait_for_plan_from_architect</td><td>Builder</td><td class="k">awaiting_builder_pickup</td><td class="k">builder_working</td><td class="muted">指示を返す（受け取りの記録 = claim）</td></tr>
+          <tr><td class="k">3</td><td class="k">send_report_to_architect</td><td>Builder</td><td class="k">builder_working</td><td class="k">awaiting_architect_pickup</td><td class="muted">報告書</td></tr>
+          <tr><td class="k">4</td><td class="k">wait_for_report_from_builder</td><td>Architect</td><td class="k">awaiting_architect_pickup</td><td class="k">idle</td><td class="muted">報告を返す（受け取りの記録）</td></tr>
         </tbody>
       </table>
     </div>
@@ -266,7 +266,7 @@
       <h3>決める点</h3>
       <ul>
         <li>T1 の遷移表と違う状態でツールが呼ばれたとき、サーバーはどう応答するか。</li>
-        <li>例: 報告を受け取る前に、次の <span class="mono">dispatch_to_builder</span> が呼ばれる。実装中に、もう一度 <span class="mono">dispatch_to_builder</span> が呼ばれる。</li>
+        <li>例: 報告を受け取る前に、次の <span class="mono">send_plan_to_builder</span> が呼ばれる。実装中に、もう一度 <span class="mono">send_plan_to_builder</span> が呼ばれる。</li>
       </ul>
     </div>
 
@@ -285,7 +285,7 @@
       </div>
       <div class="opt">
         <div class="head"><span class="letter">C</span><span class="title">呼び出しを待たせる</span></div>
-        <p><span class="mono">dispatch_to_builder</span> も、<span class="mono">idle</span> になるまで待機する。</p>
+        <p><span class="mono">send_plan_to_builder</span> も、<span class="mono">idle</span> になるまで待機する。</p>
         <p class="pro">呼び出し側がエラーを扱わなくてよい。</p>
         <p class="con">何が詰まっているか見えない。待機が長くなり、T7 の問題が増える。</p>
       </div>
@@ -297,7 +297,7 @@
   "code": "invalid_state",
   "current_state": "builder_working",
   "message": "Builder が実装中のため、新しい指示は送れません。",
-  "hint": "await_builder_result で報告を待つか、人間に確認してください。"
+  "hint": "wait_for_report_from_builder で報告を待つか、人間に確認してください。"
 }</pre>
 
     <div class="why">
@@ -318,12 +318,12 @@
       </ul>
     </div>
 
-    <p>このとき、状態は <span class="mono">builder_working</span> のまま残る。Architect は <span class="mono">await_builder_result</span> で待ち続ける。サーバーは、Builder が止まったことを知る手段がない。T1 の A なら、この状況を「<span class="mono">builder_working</span> のまま動いていない」として扱える。</p>
+    <p>このとき、状態は <span class="mono">builder_working</span> のまま残る。Architect は <span class="mono">wait_for_report_from_builder</span> で待ち続ける。サーバーは、Builder が止まったことを知る手段がない。T1 の A なら、この状況を「<span class="mono">builder_working</span> のまま動いていない」として扱える。</p>
 
     <div class="opts">
       <div class="opt rec">
         <div class="head"><span class="letter">A</span><span class="title">再開できるようにする</span><span class="badge">推奨</span></div>
-        <p>状態は <span class="mono">builder_working</span> のまま残す。人間が Builder に「続けて」と伝え、Builder が <span class="mono">await_architect_task</span> を呼ぶと、同じ指示が再度返る（<span class="mono">status: "resumed"</span>）。中止の操作は Phase 2 で作る。</p>
+        <p>状態は <span class="mono">builder_working</span> のまま残す。人間が Builder に「続けて」と伝え、Builder が <span class="mono">wait_for_plan_from_architect</span> を呼ぶと、同じ指示が再度返る（<span class="mono">status: "resumed"</span>）。中止の操作は Phase 2 で作る。</p>
         <p class="pro">MVP の実装が小さい。Esc のあとに、作業を続ける通常の流れが成立する。</p>
         <p class="con">作業をやめたいときは、<span class="mono">state.json</span> を手で編集する必要がある。</p>
       </div>
@@ -346,7 +346,7 @@
         <h3>Esc で止められる場所による違い</h3>
         <ul>
           <li><b>Builder が実装中</b>: 本論点。状態は <span class="mono">builder_working</span> のまま残る。</li>
-          <li><b>Architect が待機中</b>: 状態は影響を受けない。あとで Builder の報告が届き、Architect が <span class="mono">await_builder_result</span> を呼べば受け取れる。</li>
+          <li><b>Architect が待機中</b>: 状態は影響を受けない。あとで Builder の報告が届き、Architect が <span class="mono">wait_for_report_from_builder</span> を呼べば受け取れる。</li>
           <li><b>Builder が待機中</b>（<span class="mono">idle</span> のまま）: 待機が中断されるだけで、状態は変わらない。</li>
         </ul>
       </div>
@@ -436,13 +436,13 @@
       </ul>
     </div>
 
-    <p>仕様書は「連続自動往復回数が上限に達したら、人間の確認を要求する」としている。ただ、サーバーは、2回の <span class="mono">dispatch_to_builder</span> の間に人間が議論に加わったかを知る手段がない。そのため、「連続」と「自動」は、そのままでは判定できない。</p>
+    <p>仕様書は「連続自動往復回数が上限に達したら、人間の確認を要求する」としている。ただ、サーバーは、2回の <span class="mono">send_plan_to_builder</span> の間に人間が議論に加わったかを知る手段がない。そのため、「連続」と「自動」は、そのままでは判定できない。</p>
 
     <div class="two">
       <div class="ask">
         <h3>ターンの数え方（提案）</h3>
         <ul>
-          <li>1ターン = <span class="mono">dispatch_to_builder</span> が成功した1回。</li>
+          <li>1ターン = <span class="mono">send_plan_to_builder</span> が成功した1回。</li>
           <li>上限は <span class="mono">state.json</span> の <span class="mono">max_turns</span>。初期値は 10。</li>
           <li>人間が解除するまで、<span class="mono">turn_count</span> は増え続ける。</li>
         </ul>
@@ -465,7 +465,7 @@
       </div>
       <div class="opt rec">
         <div class="head"><span class="letter">B</span><span class="title">サーバーが拒否し、人間が解除する</span><span class="badge">推奨</span></div>
-        <p>上限に達すると、<span class="mono">dispatch_to_builder</span> が <span class="mono">turn_limit_reached</span> のエラーを返す。人間が <span class="mono">turn_count</span> をリセットするまで、次の指示は送れない。MVP では <span class="mono">state.json</span> を手で編集し、Phase 2 以降で CLI を用意する。</p>
+        <p>上限に達すると、<span class="mono">send_plan_to_builder</span> が <span class="mono">turn_limit_reached</span> のエラーを返す。人間が <span class="mono">turn_count</span> をリセットするまで、次の指示は送れない。MVP では <span class="mono">state.json</span> を手で編集し、Phase 2 以降で CLI を用意する。</p>
         <p class="pro">サーバーが強制するので、エージェントの指示忘れに左右されない。エージェントが自分で解除できない。</p>
         <p class="con">解除の手間がある。</p>
       </div>
@@ -514,8 +514,8 @@
       <div class="ask">
         <h3>MVP での中身の形式（提案）</h3>
         <ul>
-          <li><span class="mono">dispatch_to_builder</span> の引数（目的・背景・対象・制約・完了条件）を、固定の見出しで Markdown に整形して保存する。</li>
-          <li><span class="mono">report_to_architect</span> も同様（ステータス・変更ファイル・検証ログ・未解決の論点）。</li>
+          <li><span class="mono">send_plan_to_builder</span> の引数（目的・背景・対象・制約・完了条件）を、固定の見出しで Markdown に整形して保存する。</li>
+          <li><span class="mono">send_report_to_architect</span> も同様（ステータス・変更ファイル・検証ログ・未解決の論点）。</li>
           <li>圧縮率を上げる形式の最適化は、Phase 2 の課題。</li>
         </ul>
       </div>
@@ -608,7 +608,7 @@
       <h3>各項目の役割</h3>
       <ul>
         <li><span class="mono">revision</span>: 書き込みのたびに +1 する。書き込む前に、読んだときの値と一致するか確認し、他のプロセスが先に更新していたら失敗させる（競合の検出）。</li>
-        <li><span class="mono">turn_count</span> と <span class="mono">max_turns</span>: T5。<span class="mono">turn_count</span> が <span class="mono">max_turns</span> に達すると、<span class="mono">dispatch_to_builder</span> が拒否される。</li>
+        <li><span class="mono">turn_count</span> と <span class="mono">max_turns</span>: T5。<span class="mono">turn_count</span> が <span class="mono">max_turns</span> に達すると、<span class="mono">send_plan_to_builder</span> が拒否される。</li>
         <li><span class="mono">current</span>: 実行中のターンの情報。T3 の再開で、同じ指示を返すために使う。</li>
       </ul>
     </div>

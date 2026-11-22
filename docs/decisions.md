@@ -210,3 +210,31 @@
   - B: 上書きして続行する。実装中の指示が黙って消え、履歴と状態が食い違う。
   - C: 呼び出しを待たせる。何が詰まっているか見えず、待機が長くなる。
 - 帰結: ロールの指示文（`/architect` と `/builder`）に、エラーを受けたときの動き（自動でやり直さず、人間に確認して止まる）を書く。待つ側のツール（`await_*`）は、待てば条件が整う場合はエラーにせず待機し、整わない場合だけエラーにする。具体的な表は T3 のあとに決める。
+
+## D-016: ツール名は「送る物 + 向き」で付ける
+- 日付: 2026-11-22
+- 状態: 確定
+- 決定: 4つのツールの名前を、次のとおりに変える。
+
+| 呼ぶ側 | 動作 | 新しい名前 | 仕様書の名前 |
+| :--- | :--- | :--- | :--- |
+| Architect | 指示書（Plan）を送る | `send_plan_to_builder` | `dispatch_to_builder` |
+| Builder | 指示書を待って受け取る | `wait_for_plan_from_architect` | `await_architect_task` |
+| Builder | 報告書（Report）を送る | `send_report_to_architect` | `report_to_architect` |
+| Architect | 報告書を待って受け取る | `wait_for_report_from_builder` | `await_builder_result` |
+
+- 理由:
+  - 送る側と受ける側で、同じ物に同じ語を使う。旧名は、同じ物が `report` と `result` に分かれていた。
+  - 宛先（`to`）と送り元（`from`）を名前に含め、視点を統一する。旧名は、宛先の視点（`_to_builder`）と送り元の視点（`await_architect_`）が混ざっていた。
+  - `dispatch` のような専門的な語を避け、平易な `send` と `wait_for` にする。
+  - 履歴ファイル（`001_plan.md`、`001_report.md`）や、仕様書の用語（Plan、Report）と揃える。
+  - 向きを名前に入れることで、Architect が Builder 用のツールを呼ぶような取り違えに、気づきやすくなる。
+- 検討した案:
+  - A: `send_plan` / `wait_for_plan` / `send_report` / `wait_for_report`。短いが、宛先が名前に出ない。
+  - B: 仕様書のまま。上の問題が残る。
+- 受け入れる欠点: 名前が長い。ツール名はコンテキストに毎回出るので、コストになる（MCP 上では `mcp__cc-bridge__send_plan_to_builder` の形）。実際の影響が大きければ、短縮を見直す。
+- 帰結:
+  - D-013 の遷移表と D-015 の応答例のツール名は、この決定で置き換える。当時の記述は履歴として残す。
+  - `docs/state-design.html` は、新しい名前に更新した。
+  - `docs/spec.md` は更新していない（状態名の D-012 と同じく、更新するかは別途決める）。
+  - 状態の変化と待機の動作（D-013、D-014、D-015）は、名前の変更では変わらない。
