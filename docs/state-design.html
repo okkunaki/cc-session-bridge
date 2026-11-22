@@ -144,7 +144,7 @@
         <thead><tr><th>論点</th><th>決める内容</th><th>推奨</th><th>状態</th></tr></thead>
         <tbody>
           <tr><td class="k"><a href="#t1">T1</a></td><td>状態の種類と遷移</td><td>A: 4状態（<span class="mono">builder_working</span> と <span class="mono">idle</span> への戻りを追加）</td><td><span class="chip done">決定</span></td></tr>
-          <tr><td class="k"><a href="#t2">T2</a></td><td>不正な順序で呼ばれたときの扱い</td><td>A: エラーを返し、現在の状態と次の手を伝える</td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t2">T2</a></td><td>不正な順序で呼ばれたときの扱い</td><td>A: エラーを返し、現在の状態と次の手を伝える</td><td><span class="chip done">決定</span></td></tr>
           <tr><td class="k"><a href="#t3">T3</a></td><td>実装中に Esc で止められたときの復帰</td><td>A: 再開できる設計。中止操作は Phase 2</td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t4">T4</a></td><td><span class="mono">channel_id</span> とディレクトリ構成</td><td>C: ツール引数で指定。省略時は <span class="mono">default</span></td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t5">T5</a></td><td><span class="mono">turn_count</span> と人間確認</td><td>B: サーバーが拒否し、人間が解除する</td><td><span class="chip now">今決める</span></td></tr>
@@ -260,7 +260,7 @@
 
   <!-- T2 -->
   <section class="sec" id="t2">
-    <h2><span class="id">T2</span> 不正な順序で呼ばれたときの扱い <span class="chip now">今決める</span></h2>
+    <h2><span class="id">T2</span> 不正な順序で呼ばれたときの扱い <span class="chip done">決定: A（D-015）</span></h2>
 
     <div class="ask">
       <h3>決める点</h3>
