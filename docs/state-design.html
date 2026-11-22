@@ -149,7 +149,7 @@
           <tr><td class="k"><a href="#t4">T4</a></td><td><span class="mono">channel_id</span> とディレクトリ構成</td><td>C: ツール引数で指定。省略時は <span class="mono">default</span></td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t5">T5</a></td><td><span class="mono">turn_count</span> と人間確認</td><td>B: サーバーが拒否し、人間が解除する</td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t6">T6</a></td><td>最新ファイルと履歴の関係</td><td>A: 両方を保存する</td><td><span class="chip now">今決める</span></td></tr>
-          <tr><td class="k"><a href="#t7">T7</a></td><td>待機の間隔・上限・進捗通知</td><td>仮案（待機の長さは計測済み）</td><td><span class="chip wait">Esc のみ計測待ち</span></td></tr>
+          <tr><td class="k"><a href="#t7">T7</a></td><td>待機の間隔・上限・進捗通知</td><td>仮案（計測済み）</td><td><span class="chip now">今決める</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -351,10 +351,10 @@
         </ul>
       </div>
       <div class="ask">
-        <h3>計測待ちの部分</h3>
+        <h3>計測結果（待機中の Esc）</h3>
         <ul>
-          <li>待機中の Esc が、サーバーにキャンセルとして伝わるか（T7 の計測で確認する）。</li>
-          <li>伝わるなら、待機中の状態を後始末できる。伝わらなくても、A の設計は成立する。</li>
+          <li>伝わった。サーバーは <span class="mono">AbortError: remote-cancel</span> を受け取り、待機を止められた（D-014）。</li>
+          <li>中断後も、同じセッションで次のツール呼び出しができた。待機中の後始末は、キャンセルの検知で行える。ただし、実装中（ツールを呼んでいない間）の Esc は、この計測の対象外。</li>
         </ul>
       </div>
     </div>
@@ -537,15 +537,15 @@
 
   <!-- T7 -->
   <section class="sec" id="t7">
-    <h2><span class="id">T7</span> 待機の間隔・上限・進捗通知 <span class="chip wait">Esc のみ計測待ち</span></h2>
+    <h2><span class="id">T7</span> 待機の間隔・上限・進捗通知 <span class="chip now">計測済み・決める</span></h2>
 
     <div class="ask">
-      <h3>いま決められないこと</h3>
+      <h3>決めること（計測は完了）</h3>
       <ul>
         <li><span class="mono">pending</span> を返す間隔（秒数）。</li>
         <li>待機ループの合計上限と、上限後の動き。</li>
         <li>進捗通知で、待機を維持するか。</li>
-        <li>待機中の Esc を、サーバーがキャンセルとして受け取れるか。</li>
+        <li>待機中の Esc を受けたとき、サーバーが何を後始末するか（キャンセルの受け取りは確認済み）。</li>
       </ul>
     </div>
 
@@ -557,7 +557,7 @@
           <tr><td>待機の長さ</td><td>10、30、60、120、300、600 秒（進捗通知なし）がすべて成功した。失敗は一度もなかった。600 秒は計測用ツールの上限で、それより長い待機は未測定</td></tr>
           <tr><td><span class="mono">progressToken</span></td><td>Claude Code が、全ての呼び出しに付けていた。進捗通知は 300 秒の呼び出しで、5 秒ごとにサーバーから送信できた</td></tr>
           <tr><td>進捗通知の延長効果</td><td>未検証。タイムアウトが起きる条件まで測っていないため</td></tr>
-          <tr><td>待機中の Esc</td><td>未検証。1回試したが、Esc が押されず、60 秒を完走した。再試行する</td></tr>
+          <tr><td>待機中の Esc</td><td>サーバーにキャンセルが伝わった。<span class="mono">sleep(120)</span> を約 11 秒で中断でき、サーバーは <span class="mono">AbortError: remote-cancel</span> を受け取って待機を止めた。中断後も、同じセッションでツールを呼べた</td></tr>
           <tr><td>権限確認ダイアログ</td><td>実行役の報告では出なかった。画面で出たかは、開発者の確認が必要</td></tr>
         </tbody>
       </table>
