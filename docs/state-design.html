@@ -149,7 +149,7 @@
           <tr><td class="k"><a href="#t4">T4</a></td><td><span class="mono">channel_id</span> とディレクトリ構成</td><td>C: ツール引数で指定。省略時は <span class="mono">default</span></td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t5">T5</a></td><td><span class="mono">turn_count</span> と人間確認</td><td>B: サーバーが拒否し、人間が解除する</td><td><span class="chip now">今決める</span></td></tr>
           <tr><td class="k"><a href="#t6">T6</a></td><td>最新ファイルと履歴の関係</td><td>A: 両方を保存する</td><td><span class="chip now">今決める</span></td></tr>
-          <tr><td class="k"><a href="#t7">T7</a></td><td>待機の間隔・上限・進捗通知</td><td>仮案のみ</td><td><span class="chip wait">計測待ち</span></td></tr>
+          <tr><td class="k"><a href="#t7">T7</a></td><td>待機の間隔・上限・進捗通知</td><td>仮案（待機の長さは計測済み）</td><td><span class="chip wait">Esc のみ計測待ち</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -537,7 +537,7 @@
 
   <!-- T7 -->
   <section class="sec" id="t7">
-    <h2><span class="id">T7</span> 待機の間隔・上限・進捗通知 <span class="chip wait">計測待ち</span></h2>
+    <h2><span class="id">T7</span> 待機の間隔・上限・進捗通知 <span class="chip wait">Esc のみ計測待ち</span></h2>
 
     <div class="ask">
       <h3>いま決められないこと</h3>
@@ -549,7 +549,21 @@
       </ul>
     </div>
 
-    <p>実行役がタイムアウトの計測を行っている。結果が出たら、この論点を埋める。いまの仮案は次のとおり。</p>
+    <p>タイムアウトの計測（2026-11-22 実施）の結果は次のとおり。サーバー側のログ（<span class="mono">probe.log</span>）と照合して確認した。</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>項目</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr><td>待機の長さ</td><td>10、30、60、120、300、600 秒（進捗通知なし）がすべて成功した。失敗は一度もなかった。600 秒は計測用ツールの上限で、それより長い待機は未測定</td></tr>
+          <tr><td><span class="mono">progressToken</span></td><td>Claude Code が、全ての呼び出しに付けていた。進捗通知は 300 秒の呼び出しで、5 秒ごとにサーバーから送信できた</td></tr>
+          <tr><td>進捗通知の延長効果</td><td>未検証。タイムアウトが起きる条件まで測っていないため</td></tr>
+          <tr><td>待機中の Esc</td><td>未検証。1回試したが、Esc が押されず、60 秒を完走した。再試行する</td></tr>
+          <tr><td>権限確認ダイアログ</td><td>実行役の報告では出なかった。画面で出たかは、開発者の確認が必要</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">この結果から、仕様書の「30〜60 秒で <span class="mono">pending</span> を返す」は、少なくとも 10 分までは不要と言える。10 分を超える待機は、ドキュメントの記述（アイドルタイムアウト 30 分）を参考に、設計で扱う。</p>
+    <p>いまの仮案は次のとおり。</p>
 
     <div class="scroll">
       <table>
