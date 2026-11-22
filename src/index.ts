@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { registerSleepProbe } from "./experiments/sleep.js";
 
 const server = new McpServer({ name: "cc-session-bridge", version: "0.0.1" });
 
@@ -9,6 +10,8 @@ server.registerTool(
   { description: "Health check. Returns 'pong'." },
   async () => ({ content: [{ type: "text", text: "pong" }] }),
 );
+
+registerSleepProbe(server);
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
