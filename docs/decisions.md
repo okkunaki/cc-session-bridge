@@ -241,7 +241,7 @@
 
 ## D-017: ツール名は短い形に変更する（D-016 を置換）
 - 日付: 2026-11-22
-- 状態: 確定
+- 状態: 置換（D-018 で、受け取る側のツール名を `pickup_*` に変更した）
 - 決定: 4つのツールの名前を、向きを含まない短い形にする。
 
 | 呼ぶ側 | 動作 | 新しい名前 | D-016 の名前 | 仕様書の名前 |
@@ -260,3 +260,37 @@
   - `docs/state-design.html` は、新しい名前に更新した。
   - `docs/spec.md` は更新していない（状態名の D-012 と同じく、更新するかは別途決める）。
   - 状態の変化と待機の動作（D-013、D-014、D-015）は、名前の変更では変わらない。
+
+## D-018: 受け取る側のツール名を、状態名の「pickup」に対応させる（D-017 を置換）
+- 日付: 2026-11-22
+- 状態: 確定
+- 決定: 受け取る側の2つのツールを `pickup_plan` と `pickup_report` に変える。送る側（`send_plan`、`send_report`）は変えない。
+
+| 呼ぶ側 | 動作 | 新しい名前 | D-017 の名前 | 仕様書の名前 |
+| :--- | :--- | :--- | :--- | :--- |
+| Architect | 指示書（Plan）を送る | `send_plan` | `send_plan` | `dispatch_to_builder` |
+| Builder | 指示書を受け取る（届いていなければ待つ） | `pickup_plan` | `wait_for_plan` | `await_architect_task` |
+| Builder | 報告書（Report）を送る | `send_report` | `send_report` | `report_to_architect` |
+| Architect | 報告書を受け取る（届いていなければ待つ） | `pickup_report` | `wait_for_report` | `await_builder_result` |
+
+状態名（D-012）との対応は次のとおり。
+
+```text
+awaiting_builder_pickup    --pickup_plan-->    builder_working
+awaiting_architect_pickup  --pickup_report-->  idle
+```
+
+- 理由:
+  - `wait_for_plan` が待機するのは、指示書がまだ届いていない（`idle` で呼ばれた）ときだけ。すでに届いている（`awaiting_builder_pickup`、例: 翌朝の `/builder` で指示書がファイルにある）ときは、待たずにすぐ返す。名前の `wait` は、動作の一部しか表していなかった。
+  - 状態名の `awaiting_*_pickup` と同じ語（`pickup`）を使い、「この状態から受け取る動作」と対応させる。受け取りは、待つ場合も待たない場合も必ず起きる。
+  - 開発者が、「ツールを呼ぶ時点では、すでに `awaiting_builder_pickup` ではないか」と指摘した。
+- 検討した案:
+  - A: `wait_for_plan` / `wait_for_report`（D-017）。待機は表せるが、待たない場合と合わない。
+  - C: `receive_plan` / `receive_report`。受け取りは表せるが、状態名との対応が弱い。
+- 受け入れる欠点: 待機することが、名前に出ない。補い方は、ツールの説明文に「届いていなければ、届くまで待機する」と明記すること、ロールの指示文にも書くこと。人間の画面では、実行中の表示で分かる。
+- 補足: 動詞は `pick up`、名詞は `pickup`。`pick_up_plan` より短い `pickup_plan` を使う。
+- 帰結:
+  - 動作は変わらない。状態が合えばすぐ返し、まだ届いていなければ待機し（T7）、状態が合わない呼び出しは `error` を返す（D-015）。
+  - D-013 の遷移表、D-015 の応答例、D-016、D-017 のツール名は、この決定で置き換える。当時の記述は履歴として残す。
+  - `docs/state-design.html` は、新しい名前に更新した。
+  - `docs/spec.md` は更新していない（状態名の D-012 と同じく、更新するかは別途決める）。
