@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>状態管理の設計議論</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: 冒頭に論点の一覧(推奨つき)、続いて論点ごとに「決める点・選択肢・推奨・理由」。返信は「T1はA」の形で足りるようにする */
+  :root {
+    --bg: #F4F7F9;
+    --surface: #FFFFFF;
+    --fg: #17202A;
+    --muted: #556270;
+    --line: #D3DBE3;
+    --accent: #0B7A75;
+    --accent-soft: #DDF1EF;
+    --warn: #A5530A;
+    --warn-soft: #FBEFD9;
+    --font-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1418;
+      --surface: #151D23;
+      --fg: #E6ECF1;
+      --muted: #9AA8B4;
+      --line: #2A3640;
+      --accent: #4FD1C5;
+      --accent-soft: #12332F;
+      --warn: #F0B35A;
+      --warn-soft: #3A2B12;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1418;
+    --surface: #151D23;
+    --fg: #E6ECF1;
+    --muted: #9AA8B4;
+    --line: #2A3640;
+    --accent: #4FD1C5;
+    --accent-soft: #12332F;
+    --warn: #F0B35A;
+    --warn-soft: #3A2B12;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.8;
+    padding: 32px max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px));
+  }
+  main { max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+  h1 { font-size: clamp(1.5rem, 4.5vw, 2.1rem); line-height: 1.35; margin: 0 0 8px; text-wrap: balance; }
+  h2 { font-size: 1.3rem; line-height: 1.4; margin: 0 0 14px; text-wrap: balance; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+  h3 { font-size: 1rem; margin: 0 0 8px; }
+  p { margin: 0 0 12px; max-width: 68ch; }
+  .lead { color: var(--muted); margin: 0; }
+  code, .mono { font-family: var(--font-mono); font-size: 0.9em; }
+  code { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+  a { color: var(--accent); }
+  .id { font-family: var(--font-mono); color: var(--accent); font-size: 0.85em; }
+
+  .chip { display: inline-block; font-size: 12px; line-height: 1.6; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .chip.now { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .chip.wait { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+
+  .scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; max-width: 100%; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; background: var(--bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  td.k { font-family: var(--font-mono); white-space: nowrap; }
+  td.muted { color: var(--muted); }
+
+  .ask { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; min-width: 0; }
+  .ask h3 { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; font-weight: 500; }
+  .ask ul { margin: 0; padding-left: 1.2em; }
+  .ask li { margin-bottom: 4px; }
+
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 16px 0; }
+  .opt { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 12px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .opt.rec { border: 2px solid var(--accent); padding: 13px 15px 11px; }
+  .opt .head { display: flex; align-items: center; gap: 10px; }
+  .opt .letter { font-family: var(--font-mono); font-weight: 500; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--muted); color: var(--muted); flex: none; }
+  .opt.rec .letter { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+  .opt .title { font-weight: 700; }
+  .opt .badge { margin-left: auto; font-size: 11px; color: var(--accent); font-weight: 700; letter-spacing: 0.06em; }
+  .opt p { font-size: 14px; margin: 0; }
+  .opt .pro, .opt .con { font-size: 13px; color: var(--muted); }
+  .opt .pro::before { content: "利点: "; font-weight: 700; }
+  .opt .con::before { content: "欠点: "; font-weight: 700; }
+
+  .why { border-top: 1px solid var(--line); padding-top: 12px; }
+  .why p { max-width: 72ch; }
+
+  .diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .diagram svg { display: block; min-width: 700px; width: 100%; height: auto; }
+  svg text { font-family: var(--font-body); }
+  .st { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+  .st.add { stroke: var(--warn); stroke-width: 2.5; fill: var(--warn-soft); }
+  .name { font-family: var(--font-mono); font-size: 15px; font-weight: 500; fill: var(--fg); text-anchor: middle; }
+  .sub { font-size: 12px; fill: var(--muted); text-anchor: middle; }
+  .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .arrow.add { stroke: var(--warn); stroke-width: 2; marker-end: url(#aw); }
+  .num { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
+  .num.add { stroke: var(--warn); }
+  .numt { font-family: var(--font-mono); font-size: 12px; font-weight: 500; fill: var(--fg); text-anchor: middle; dominant-baseline: central; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 10px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .sw { width: 22px; height: 12px; border-radius: 3px; border: 1.5px solid var(--line); background: var(--surface); flex: none; }
+  .sw.add { border: 2px solid var(--warn); background: var(--warn-soft); }
+
+  pre { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 13px; line-height: 1.65; max-width: 100%; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .two > * { min-width: 0; }
+  .note { font-size: 13px; color: var(--muted); margin: 10px 0 0; max-width: none; }
+  .sec { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .sec > * { min-width: 0; }
+  footer { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+
+  <header>
+    <h1>状態管理の設計議論</h1>
+    <p class="lead">cc-session-bridge の <code>state.json</code> と状態遷移を決めるための資料。論点ごとに、選択肢と推奨を並べた。返信は「T1はA、T2はA」のように、論点の番号と選択肢の記号で足りる。</p>
+  </header>
+
+  <section class="sec" id="summary">
+    <h2>論点の一覧</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>論点</th><th>決める内容</th><th>推奨</th><th>状態</th></tr></thead>
+        <tbody>
+          <tr><td class="k"><a href="#t1">T1</a></td><td>状態の種類と遷移</td><td>A: 4状態（<span class="mono">in_progress</span> と <span class="mono">idle</span> への戻りを追加）</td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t2">T2</a></td><td>不正な順序で呼ばれたときの扱い</td><td>A: エラーを返し、現在の状態と次の手を伝える</td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t3">T3</a></td><td>実装中に Esc で止められたときの復帰</td><td>A: 再開できる設計。中止操作は Phase 2</td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t4">T4</a></td><td><span class="mono">channel_id</span> とディレクトリ構成</td><td>C: ツール引数で指定。省略時は <span class="mono">default</span></td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t5">T5</a></td><td><span class="mono">turn_count</span> と人間確認</td><td>B: サーバーが拒否し、人間が解除する</td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t6">T6</a></td><td>最新ファイルと履歴の関係</td><td>A: 両方を保存する</td><td><span class="chip now">今決める</span></td></tr>
+          <tr><td class="k"><a href="#t7">T7</a></td><td>待機の間隔・上限・進捗通知</td><td>仮案のみ</td><td><span class="chip wait">計測待ち</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">T1 から T3 は互いに関係が深いので、この順に決めるのがよい。T4 以降は独立している。</p>
+  </section>
+
+  <section class="sec" id="premise">
+    <h2>前提（決定済み）</h2>
+    <ul class="ask" style="list-style:none;padding:14px 18px;">
+      <li><span class="id">D-001</span> MCP サーバー（stdio）と <span class="mono">.cc-bridge/</span> の共有ファイルで橋渡しする。タブごとに別プロセスが立つので、状態の唯一の情報源はファイル。</li>
+      <li><span class="id">D-007</span> 競合対策として、アトミック書き込み（一時ファイル + <span class="mono">rename</span>）、状態遷移の検証、<span class="mono">channel_id</span> ごとのディレクトリ分離を MVP で入れる。排他ロックは Phase 2 以降。</li>
+      <li><span class="id">D-011</span> MCP SDK は v2（<span class="mono">@modelcontextprotocol/server</span>）を使う。</li>
+    </ul>
+  </section>
+
+  <!-- T1 -->
+  <section class="sec" id="t1">
+    <h2><span class="id">T1</span> 状態の種類と遷移 <span class="chip now">今決める</span></h2>
+
+    <div class="ask">
+      <h3>決める点</h3>
+      <ul>
+        <li>仕様書の3状態に <span class="mono">in_progress</span> を足すか。</li>
+        <li>報告を受け取ったあと、<span class="mono">idle</span> に戻すか。</li>
+      </ul>
+    </div>
+
+    <p>仕様書の状態は <span class="mono">idle</span>、<span class="mono">waiting_builder</span>、<span class="mono">waiting_architect</span> の3つで、戻りの遷移は書かれていない。次の図は、4状態にした場合の遷移で、仕様書にない追加分を黄色で示している。</p>
+
+    <ul class="legend">
+      <li><span class="sw"></span>仕様書にある</li>
+      <li><span class="sw add"></span>仕様書にない追加</li>
+    </ul>
+    <div class="diagram">
+      <svg viewBox="0 0 830 190" role="img" aria-label="idle から waiting_builder、in_progress、waiting_architect を経て idle に戻る4状態の遷移図">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
+          <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--warn)"/></marker>
+        </defs>
+
+        <rect class="st" x="20" y="80" width="160" height="64" rx="10"/>
+        <text class="name" x="100" y="108">idle</text>
+        <text class="sub" x="100" y="128">タスクなし</text>
+
+        <rect class="st" x="230" y="80" width="160" height="64" rx="10"/>
+        <text class="name" x="310" y="108">waiting_builder</text>
+        <text class="sub" x="310" y="128">指示が届いている</text>
+
+        <rect class="st add" x="440" y="80" width="160" height="64" rx="10"/>
+        <text class="name" x="520" y="108">in_progress</text>
+        <text class="sub" x="520" y="128">Builder が実装中</text>
+
+        <rect class="st" x="650" y="80" width="160" height="64" rx="10"/>
+        <text class="name" x="730" y="108">waiting_architect</text>
+        <text class="sub" x="730" y="128">報告が届いている</text>
+
+        <path class="arrow" d="M182 112 H228"/>
+        <circle class="num" cx="205" cy="112" r="11"/><text class="numt" x="205" y="112">1</text>
+        <path class="arrow add" d="M392 112 H438"/>
+        <circle class="num add" cx="415" cy="112" r="11"/><text class="numt" x="415" y="112">2</text>
+        <path class="arrow" d="M602 112 H648"/>
+        <circle class="num" cx="625" cy="112" r="11"/><text class="numt" x="625" y="112">3</text>
+        <path class="arrow add" d="M730 78 C730 16 100 16 100 78"/>
+        <circle class="num add" cx="415" cy="34" r="11"/><text class="numt" x="415" y="34">4</text>
+      </svg>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>#</th><th>ツール</th><th>呼ぶ側</th><th>事前の状態</th><th>事後の状態</th><th>保存するもの</th></tr></thead>
+        <tbody>
+          <tr><td class="k">1</td><td class="k">dispatch_to_builder</td><td>Architect</td><td class="k">idle</td><td class="k">waiting_builder</td><td class="muted">指示書、<span class="mono">turn_count</span> を +1</td></tr>
+          <tr><td class="k">2</td><td class="k">await_architect_task</td><td>Builder</td><td class="k">waiting_builder</td><td class="k">in_progress</td><td class="muted">指示を返す（受け取りの記録 = claim）</td></tr>
+          <tr><td class="k">3</td><td class="k">report_to_architect</td><td>Builder</td><td class="k">in_progress</td><td class="k">waiting_architect</td><td class="muted">報告書</td></tr>
+          <tr><td class="k">4</td><td class="k">await_builder_result</td><td>Architect</td><td class="k">waiting_architect</td><td class="k">idle</td><td class="muted">報告を返す（受け取りの記録）</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">待つ側の呼び出し（2 と 4）は、事前の状態になるまで待機し、<span class="mono">pending</span> を返しながら再待機する。待機の詳細は T7。</p>
+
+    <div class="opts">
+      <div class="opt rec">
+        <div class="head"><span class="letter">A</span><span class="title">4状態にする</span><span class="badge">推奨</span></div>
+        <p>上の図のとおり、<span class="mono">in_progress</span> を追加し、報告の受け取りで <span class="mono">idle</span> に戻す。</p>
+        <p class="pro">Builder が指示を受け取った事実が記録される。2つの Builder が待っていても、指示は1回だけ渡る。Esc で止められたとき、状態が <span class="mono">in_progress</span> のまま残るので、「途中で止まった」と判別できる（T3）。</p>
+        <p class="con">仕様書より状態が1つ増える。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">B</span><span class="title">仕様書どおり3状態</span></div>
+        <p>戻りの遷移だけ足す。指示の受け取りでは状態を変えない。</p>
+        <p class="pro">仕様書に忠実で、状態が少ない。</p>
+        <p class="con">指示の二重受信を防げない。実装中かどうかが状態に出ず、Esc で止められたときの判別ができない。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">C</span><span class="title">4状態を Phase 2 に回す</span></div>
+        <p>MVP は B で作り、あとから <span class="mono">in_progress</span> を足す。</p>
+        <p class="pro">最初の実装が小さい。</p>
+        <p class="con">状態遷移の検証は後付けが難しい（D-007）。あとで遷移表を作り直すことになる。</p>
+      </div>
+    </div>
+
+    <div class="why">
+      <h3>推奨の理由</h3>
+      <p>状態の種類は、遷移の検証、再開、履歴のすべての土台になる。後から増やすと、検証の条件と保存済みの <span class="mono">state.json</span> の形式の両方を直すことになる。最初から4状態にするコストは小さい。</p>
+    </div>
+  </section>
+
+  <!-- T2 -->
+  <section class="sec" id="t2">
+    <h2><span class="id">T2</span> 不正な順序で呼ばれたときの扱い <span class="chip now">今決める</span></h2>
+
+    <div class="ask">
+      <h3>決める点</h3>
+      <ul>
+        <li>T1 の遷移表と違う状態でツールが呼ばれたとき、サーバーはどう応答するか。</li>
+        <li>例: 報告を受け取る前に、次の <span class="mono">dispatch_to_builder</span> が呼ばれる。実装中に、もう一度 <span class="mono">dispatch_to_builder</span> が呼ばれる。</li>
+      </ul>
+    </div>
+
+    <div class="opts">
+      <div class="opt rec">
+        <div class="head"><span class="letter">A</span><span class="title">エラーを返す</span><span class="badge">推奨</span></div>
+        <p>状態は変えず、<span class="mono">status: "error"</span>、理由のコード、現在の状態、次にやることを返す。</p>
+        <p class="pro">状態が壊れない。エージェントが応答を読んで、人間に確認できる。</p>
+        <p class="con">エージェントがエラーの扱いを誤ると、往復が止まる。ロールの指示文に、エラー時の動きを書く必要がある。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">B</span><span class="title">上書きして続行する</span></div>
+        <p>新しい指示で、前の状態を捨てる。</p>
+        <p class="pro">往復が止まらない。</p>
+        <p class="con">実装中の指示が黙って消える。履歴と状態が食い違う。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">C</span><span class="title">呼び出しを待たせる</span></div>
+        <p><span class="mono">dispatch_to_builder</span> も、<span class="mono">idle</span> になるまで待機する。</p>
+        <p class="pro">呼び出し側がエラーを扱わなくてよい。</p>
+        <p class="con">何が詰まっているか見えない。待機が長くなり、T7 の問題が増える。</p>
+      </div>
+    </div>
+
+    <p>A の応答の例:</p>
+<pre>{
+  "status": "error",
+  "code": "invalid_state",
+  "current_state": "in_progress",
+  "message": "Builder が実装中のため、新しい指示は送れません。",
+  "hint": "await_builder_result で報告を待つか、人間に確認してください。"
+}</pre>
+
+    <div class="why">
+      <h3>推奨の理由</h3>
+      <p>2つのセッションの片方は人間が見ていない時間が長い。静かに状態が変わるより、止まって理由を出すほうが安全で、原因も追える。</p>
+    </div>
+  </section>
+
+  <!-- T3 -->
+  <section class="sec" id="t3">
+    <h2><span class="id">T3</span> 実装中に Esc で止められたときの復帰 <span class="chip now">今決める</span></h2>
+
+    <div class="ask">
+      <h3>決める点</h3>
+      <ul>
+        <li>Builder が実装している最中（ツールを呼んでいない間）に、人間が Esc で止めたとき、状態をどう扱うか。</li>
+        <li>止めたあと、作業を再開する方法と、作業をやめる方法。</li>
+      </ul>
+    </div>
+
+    <p>このとき、状態は <span class="mono">in_progress</span> のまま残る。Architect は <span class="mono">await_builder_result</span> で待ち続ける。サーバーは、Builder が止まったことを知る手段がない。T1 の A なら、この状況を「<span class="mono">in_progress</span> のまま動いていない」として扱える。</p>
+
+    <div class="opts">
+      <div class="opt rec">
+        <div class="head"><span class="letter">A</span><span class="title">再開できるようにする</span><span class="badge">推奨</span></div>
+        <p>状態は <span class="mono">in_progress</span> のまま残す。人間が Builder に「続けて」と伝え、Builder が <span class="mono">await_architect_task</span> を呼ぶと、同じ指示が再度返る（<span class="mono">status: "resumed"</span>）。中止の操作は Phase 2 で作る。</p>
+        <p class="pro">MVP の実装が小さい。Esc のあとに、作業を続ける通常の流れが成立する。</p>
+        <p class="con">作業をやめたいときは、<span class="mono">state.json</span> を手で編集する必要がある。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">B</span><span class="title">A に、中止の操作を加える</span></div>
+        <p>人間の指示で状態を <span class="mono">idle</span> に戻す手段を、MVP から用意する。履歴には中止を記録する。Architect 側の待機には <span class="mono">status: "aborted"</span> を返す。</p>
+        <p class="pro">人間が詰まったときに、ファイルを編集しなくてよい。</p>
+        <p class="con">操作の置き場所を決める必要がある（5つ目のツール、または CLI）。ツールにすると、エージェントが勝手に中止できてしまう。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">C</span><span class="title">一定時間で自動的に中止する</span></div>
+        <p><span class="mono">in_progress</span> が一定時間更新されなければ、自動で中止扱いにする。</p>
+        <p class="pro">人間が何もしなくても復帰する。</p>
+        <p class="con">長い実装が、正当な作業中に中止される。実装中は更新が出ないので、時間の基準を決められない。</p>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="ask">
+        <h3>Esc で止められる場所による違い</h3>
+        <ul>
+          <li><b>Builder が実装中</b>: 本論点。状態は <span class="mono">in_progress</span> のまま残る。</li>
+          <li><b>Architect が待機中</b>: 状態は影響を受けない。あとで Builder の報告が届き、Architect が <span class="mono">await_builder_result</span> を呼べば受け取れる。</li>
+          <li><b>Builder が待機中</b>（<span class="mono">idle</span> のまま）: 待機が中断されるだけで、状態は変わらない。</li>
+        </ul>
+      </div>
+      <div class="ask">
+        <h3>計測待ちの部分</h3>
+        <ul>
+          <li>待機中の Esc が、サーバーにキャンセルとして伝わるか（T7 の計測で確認する）。</li>
+          <li>伝わるなら、待機中の状態を後始末できる。伝わらなくても、A の設計は成立する。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="why">
+      <h3>推奨の理由</h3>
+      <p>MVP で最も重要なのは、Esc で止めたあとに「続ける」ができること。中止の操作は、必要になった実感を持ってから、置き場所を含めて設計したほうがよい。ツールとして用意すると、エージェントが自分で呼べてしまうので、慎重に決めたい。</p>
+    </div>
+  </section>
+
+  <!-- T4 -->
+  <section class="sec" id="t4">
+    <h2><span class="id">T4</span> <span class="mono">channel_id</span> とディレクトリ構成 <span class="chip now">今決める</span></h2>
+
+    <div class="ask">
+      <h3>決める点</h3>
+      <ul>
+        <li>複数の Architect と Builder のペアが混線しないよう、<span class="mono">channel_id</span> をどこで指定するか。</li>
+        <li>ディレクトリの構成を、チャンネルごとに分けるか。</li>
+      </ul>
+    </div>
+
+    <p>ディレクトリは、チャンネルごとに分ける案を前提にする（D-007）。仕様書 2.2 C の構成から、1階層深くなる。</p>
+    <div class="two">
+      <pre>.cc-bridge/
+└── default/
+    ├── state.json
+    ├── to_builder.md
+    ├── to_architect.md
+    └── history/
+        ├── 001_plan.md
+        └── 001_report.md</pre>
+      <div class="ask">
+        <h3>注意</h3>
+        <ul>
+          <li>2つのタブは、同じ <span class="mono">.mcp.json</span> を読む。そのため、設定ファイルでチャンネルを固定すると、同じリポジトリの中ではペアを分けられない。</li>
+          <li>同じリポジトリで2組を動かしたいときの指定方法が、論点になる。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="opts">
+      <div class="opt">
+        <div class="head"><span class="letter">A</span><span class="title">サーバーの起動設定で固定する</span></div>
+        <p><span class="mono">.mcp.json</span> の引数か環境変数で、チャンネルを決める。</p>
+        <p class="pro">エージェントが毎回指定しなくてよい。</p>
+        <p class="con">同じリポジトリでは、ペアを1組しか動かせない。別のペアを動かすには、リポジトリ（worktree）を分ける。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">B</span><span class="title">ツールの引数で指定する</span></div>
+        <p>各ツールが <span class="mono">channel_id</span> を受け取る。省略時は <span class="mono">default</span>。</p>
+        <p class="pro">同じリポジトリで、複数のペアを動かせる。</p>
+        <p class="con">エージェントが、毎回正しい値を渡す必要がある。</p>
+      </div>
+      <div class="opt rec">
+        <div class="head"><span class="letter">C</span><span class="title">B に、環境変数の既定値を加える</span><span class="badge">推奨</span></div>
+        <p>引数が最優先。省略時は環境変数、それもなければ <span class="mono">default</span>。<span class="mono">/architect</span> と <span class="mono">/builder</span> は、チャンネル名を引数に取り、ロールの指示文に埋め込む。</p>
+        <p class="pro">通常は何も指定せず動く。複数のペアが必要なときだけ、チャンネル名を渡す。</p>
+        <p class="con">優先順位の規則が1つ増える。</p>
+      </div>
+    </div>
+
+    <div class="why">
+      <h3>推奨の理由</h3>
+      <p>仕様書は「<span class="mono">channel_id</span>（デフォルト: <span class="mono">default</span>）による名前空間分離」を求めている。引数で指定できる B 系が仕様に合う。1組だけ使う大半のケースでは、何も指定せずに済む。</p>
+    </div>
+  </section>
+
+  <!-- T5 -->
+  <section class="sec" id="t5">
+    <h2><span class="id">T5</span> <span class="mono">turn_count</span> と人間確認 <span class="chip now">今決める</span></h2>
+
+    <div class="ask">
+      <h3>決める点</h3>
+      <ul>
+        <li>何を1ターンと数え、上限をいくつにするか。</li>
+        <li>上限に達したとき、どうやって人間の確認を強制するか。</li>
+        <li>仕様書の「連続自動往復」を、どう実装するか。</li>
+      </ul>
+    </div>
+
+    <p>仕様書は「連続自動往復回数が上限に達したら、人間の確認を要求する」としている。ただ、サーバーは、2回の <span class="mono">dispatch_to_builder</span> の間に人間が議論に加わったかを知る手段がない。そのため、「連続」と「自動」は、そのままでは判定できない。</p>
+
+    <div class="two">
+      <div class="ask">
+        <h3>ターンの数え方（提案）</h3>
+        <ul>
+          <li>1ターン = <span class="mono">dispatch_to_builder</span> が成功した1回。</li>
+          <li>上限は <span class="mono">state.json</span> の <span class="mono">max_turns</span>。初期値は 10。</li>
+          <li>人間が解除するまで、<span class="mono">turn_count</span> は増え続ける。</li>
+        </ul>
+      </div>
+      <div class="ask">
+        <h3>「連続」の扱い</h3>
+        <ul>
+          <li>人間の関与は検知できないので、「解除してからの往復回数」と読み替える。</li>
+          <li>人間が確認して続けるときに、<span class="mono">turn_count</span> を 0 に戻す。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="opts">
+      <div class="opt">
+        <div class="head"><span class="letter">A</span><span class="title">ロールの指示文だけで頼む</span></div>
+        <p>「10往復したら人間に確認する」とプロンプトに書く。サーバーは数えるだけ。</p>
+        <p class="pro">実装が最も小さい。</p>
+        <p class="con">強制力がない。エージェントが指示を忘れれば、ループが止まらない。</p>
+      </div>
+      <div class="opt rec">
+        <div class="head"><span class="letter">B</span><span class="title">サーバーが拒否し、人間が解除する</span><span class="badge">推奨</span></div>
+        <p>上限に達すると、<span class="mono">dispatch_to_builder</span> が <span class="mono">turn_limit_reached</span> のエラーを返す。人間が <span class="mono">turn_count</span> をリセットするまで、次の指示は送れない。MVP では <span class="mono">state.json</span> を手で編集し、Phase 2 以降で CLI を用意する。</p>
+        <p class="pro">サーバーが強制するので、エージェントの指示忘れに左右されない。エージェントが自分で解除できない。</p>
+        <p class="con">解除の手間がある。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">C</span><span class="title">MCP の問い合わせ機能で、人間に直接聞く</span></div>
+        <p>サーバーが、人間への確認ダイアログ（MCP の elicitation）を出し、承認されたら続行する。</p>
+        <p class="pro">人間が、その場で承認できる。ファイルの編集が不要。</p>
+        <p class="con">Claude Code（VSCode 拡張）がこの機能を使えるか、未確認。確認が先に必要。</p>
+      </div>
+    </div>
+
+    <div class="why">
+      <h3>推奨の理由</h3>
+      <p>ガードレールの目的は、エージェントが暴走したときに止めること。エージェント自身が解除できない仕組みにしたい。C は理想だが、使えるかを確認してから Phase 2 で検討すれば足りる。上限の初期値 10 は仮で、使いながら調整する。</p>
+    </div>
+  </section>
+
+  <!-- T6 -->
+  <section class="sec" id="t6">
+    <h2><span class="id">T6</span> 最新ファイルと履歴の関係 <span class="chip now">今決める</span></h2>
+
+    <div class="ask">
+      <h3>決める点</h3>
+      <ul>
+        <li><span class="mono">to_builder.md</span> と <span class="mono">to_architect.md</span>（最新）と、<span class="mono">history/</span>（往復ごとの記録）を、両方保存するか。</li>
+        <li>指示書と報告書の中身の形式を、MVP でどこまで決めるか。</li>
+      </ul>
+    </div>
+
+    <div class="opts">
+      <div class="opt rec">
+        <div class="head"><span class="letter">A</span><span class="title">両方を保存する</span><span class="badge">推奨</span></div>
+        <p>送るたびに、<span class="mono">to_*.md</span> を最新の内容で上書きし、<span class="mono">history/</span> に連番で追記する。連番はターン番号（<span class="mono">001_plan.md</span>、<span class="mono">001_report.md</span>）。</p>
+        <p class="pro">人間が「今の指示」をすぐ開ける。履歴は追記のみで、消えない。仕様書どおり。</p>
+        <p class="con">同じ内容が2か所にある。</p>
+      </div>
+      <div class="opt">
+        <div class="head"><span class="letter">B</span><span class="title">履歴だけにする</span></div>
+        <p><span class="mono">to_*.md</span> は作らず、<span class="mono">state.json</span> が最新の履歴ファイルを指す。</p>
+        <p class="pro">重複がない。</p>
+        <p class="con">人間が最新を探す手間がある。仕様書から外れる。</p>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="ask">
+        <h3>MVP での中身の形式（提案）</h3>
+        <ul>
+          <li><span class="mono">dispatch_to_builder</span> の引数（目的・背景・対象・制約・完了条件）を、固定の見出しで Markdown に整形して保存する。</li>
+          <li><span class="mono">report_to_architect</span> も同様（ステータス・変更ファイル・検証ログ・未解決の論点）。</li>
+          <li>圧縮率を上げる形式の最適化は、Phase 2 の課題。</li>
+        </ul>
+      </div>
+      <div class="ask">
+        <h3>書き込みの規則</h3>
+        <ul>
+          <li>すべてアトミック書き込み（D-007）。</li>
+          <li>履歴は、存在するファイルを上書きしない。</li>
+          <li>書き込みの順序は、履歴、最新、<span class="mono">state.json</span> の順。状態の更新を最後にする。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="why">
+      <h3>推奨の理由</h3>
+      <p>履歴は、このプロダクトの価値（設計意図と実装結果のペアの蓄積）そのもの。最新のコピーは、人間が追うときの入口として安い。状態の更新を最後にするのは、途中で止まっても、状態が先に進まないようにするため。</p>
+    </div>
+  </section>
+
+  <!-- T7 -->
+  <section class="sec" id="t7">
+    <h2><span class="id">T7</span> 待機の間隔・上限・進捗通知 <span class="chip wait">計測待ち</span></h2>
+
+    <div class="ask">
+      <h3>いま決められないこと</h3>
+      <ul>
+        <li><span class="mono">pending</span> を返す間隔（秒数）。</li>
+        <li>待機ループの合計上限と、上限後の動き。</li>
+        <li>進捗通知で、待機を維持するか。</li>
+        <li>待機中の Esc を、サーバーがキャンセルとして受け取れるか。</li>
+      </ul>
+    </div>
+
+    <p>実行役がタイムアウトの計測を行っている。結果が出たら、この論点を埋める。いまの仮案は次のとおり。</p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>項目</th><th>仮案</th><th>根拠・依存する計測</th></tr></thead>
+        <tbody>
+          <tr><td>待機ループの合計上限</td><td>30〜60 分で待機をやめ、人間に伝えて止まる。再開は <span class="mono">/builder</span></td><td class="muted">あなたの使い方では、議論で4時間、夜は約16時間空く。PC のスリープ、5分ごとの <span class="mono">pending</span> によるコンテキストの消費もあり、長時間の待機に依存しない設計にする</td></tr>
+          <tr><td><span class="mono">pending</span> の間隔</td><td>計測で成功が確認できた範囲（最大で 600 秒）の中から選ぶ</td><td class="muted">計測: 何秒まで切れないか</td></tr>
+          <tr><td>進捗通知の利用</td><td>延びるなら、待機中に定期的に送る。延びなければ使わない</td><td class="muted">計測: 通知で待機が延びるか。Claude Code が <span class="mono">progressToken</span> を付けるか</td></tr>
+          <tr><td>待機中の Esc</td><td>サーバーがキャンセルを検知できれば、待機を後始末する。できなくても T3 の A は成立する</td><td class="muted">計測: キャンセルがサーバーに伝わるか</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">上の再開の方針は、T1 の4状態と T3 の A に依存する。状態は <span class="mono">state.json</span> に残るので、待機をやめても、指示は失われない。</p>
+  </section>
+
+  <section class="sec" id="schema">
+    <h2>参考: <span class="mono">state.json</span> の形（T1〜T6 の推奨を採った場合）</h2>
+    <div class="two">
+      <pre>{
+  "version": 1,
+  "channel_id": "default",
+  "status": "idle",
+  "revision": 0,
+  "turn_count": 0,
+  "max_turns": 10,
+  "current": null,
+  "updated_at": "2026-11-22T00:00:00.000Z"
+}</pre>
+      <pre>// status が in_progress のとき
+{
+  "status": "in_progress",
+  "revision": 6,
+  "turn_count": 3,
+  "current": {
+    "turn": 3,
+    "plan_file": "history/003_plan.md",
+    "claimed_at": "2026-11-22T01:23:45.000Z"
+  }
+}</pre>
+    </div>
+    <div class="ask">
+      <h3>各項目の役割</h3>
+      <ul>
+        <li><span class="mono">revision</span>: 書き込みのたびに +1 する。書き込む前に、読んだときの値と一致するか確認し、他のプロセスが先に更新していたら失敗させる（競合の検出）。</li>
+        <li><span class="mono">turn_count</span> と <span class="mono">max_turns</span>: T5。<span class="mono">turn_count</span> が <span class="mono">max_turns</span> に達すると、<span class="mono">dispatch_to_builder</span> が拒否される。</li>
+        <li><span class="mono">current</span>: 実行中のターンの情報。T3 の再開で、同じ指示を返すために使う。</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    作成: 2026-11-22。決まった内容は <span class="mono">docs/decisions.md</span> に記録する。計測結果が出たら T7 を更新する。
+  </footer>
+
+</main>
+</body>
+</html>
