@@ -132,7 +132,7 @@
 
 ## D-012: 状態名は「主語 + 動作」で付ける
 - 日付: 2026-11-22
-- 状態: 確定（名前のみ。4状態の構成を採るかは、`docs/state-design.html` の T1 で確認中）
+- 状態: 確定（名前のみ。4状態の構成は D-013 で確定）
 - 決定: 状態名を次のとおりとする。
 
 | 状態の意味 | 状態名 | 仕様書の名前 |
@@ -148,3 +148,25 @@
 - 検討した案: 仕様書のまま（主語の役割が曖昧）、荷物ベース（`task_sent`、`report_sent`。誰の番かが名前に出ない）、受信箱（`builder_inbox`、`architect_inbox`。直感性が人によって分かれる）。
 - 補足: `awaiting` は「〜を待っている」（他動詞 await の現在分詞）、`pickup` は「受け取り」（名詞）。`awaiting_builder_pickup` は「Builder による受け取りを待っている」の意味になる。
 - 注意: `docs/spec.md` の状態名とは異なる。`docs/spec.md` は更新していない。
+
+## D-013: 状態は4つ、報告の受け取りで `idle` に戻る（T1: A）
+- 日付: 2026-11-22
+- 状態: 確定
+- 決定: 仕様書の3状態に `builder_working` を追加した4状態とし、Architect が報告を受け取ったら `idle` に戻す。遷移は次のとおり。
+
+| # | ツール | 呼ぶ側 | 事前の状態 | 事後の状態 | 保存するもの |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `dispatch_to_builder` | Architect | `idle` | `awaiting_builder_pickup` | 指示書、`turn_count` を +1 |
+| 2 | `await_architect_task` | Builder | `awaiting_builder_pickup` | `builder_working` | 指示を返す（受け取りの記録 = claim） |
+| 3 | `report_to_architect` | Builder | `builder_working` | `awaiting_architect_pickup` | 報告書 |
+| 4 | `await_builder_result` | Architect | `awaiting_architect_pickup` | `idle` | 報告を返す（受け取りの記録） |
+
+- 理由:
+  - Builder が指示を受け取った事実が、状態に記録される。2つの Builder が待っていても、指示は1回だけ渡る（二重受信の防止）。
+  - Builder が実装中に Esc で止められたとき、状態が `builder_working` のまま残るので、「途中で止まった」と判別できる（T3 の前提）。
+  - 報告を受け取って `idle` に戻らないと、次の `dispatch_to_builder` が呼べず、2往復目が始められない。
+  - 状態遷移の検証は後付けが難しい（D-007）。最初から4状態にするコストは小さい。
+- 検討した案:
+  - B: 仕様書どおり3状態で、戻りの遷移だけ足す。二重受信を防げず、Esc で止めたときの判別ができない。
+  - C: 4状態を Phase 2 に回し、MVP は B で作る。あとで遷移表と `state.json` の形式を作り直すことになる。
+- 補足: 呼ぶ側と事前の状態が合わない呼び出しの扱いは T2、Esc で止められたときの復帰は T3 で決める。仕様書（`docs/spec.md`）は更新していない。
