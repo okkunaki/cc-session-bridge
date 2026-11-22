@@ -98,3 +98,24 @@
   - 何が送られるかを開発者が実際に見てから承認することで、意図しないコミットや未整理の変更の公開を防ぐ。
   - Builder と Architect が自動でコミットを積む運用では、開発者が個々のコミットを見ていない可能性が高いため、push 直前の確認が最後の関門になる。
 - 適用範囲: Builder と Architect の両方。指示文には、この規則を制約として含める。
+
+## D-010: scaffold での TypeScript 設定と依存バージョン
+- 日付: 2026-11-22
+- 状態: 暫定（問題が出たら見直す）
+- 決定: TypeScript 7.0.2、`@types/node` 26.6.6、`zod` 4.6.7 を採用する。`tsconfig.json` には、指示にない `"types": ["node"]`、`esModuleInterop`、`skipLibCheck`、`include: ["src"]` を追加する。
+- 理由:
+  - TypeScript 7 は `types` の既定値が空になり、`"types": ["node"]` がないと `process` が解決できずビルドが失敗する。
+  - 最新の安定版をそのまま使い、依存は最小のまま維持する（D-002）。
+- 注意点: vitest や tsup など周辺ツールの導入時に、TypeScript 7 との互換性を確認する。問題があれば TypeScript のバージョンを見直す。
+
+## D-011: MCP SDK は v1（`@modelcontextprotocol/sdk`）か v2（`@modelcontextprotocol/server`）か
+- 日付: 2026-11-22
+- 状態: 確定（移行の検証結果により、v1 に戻す場合がある）
+- 経緯: scaffold では指示どおり `@modelcontextprotocol/sdk` 1.32.2 を使った。npm で確認したところ、v1 は最新が 1.32.2 で保守系統であり、v2 は `@modelcontextprotocol/server` 2.4.0 として別パッケージで公開されている。
+- 現状の実装: `registerTool` と `StdioServerTransport` を使う `src/index.ts`（22行）のみ。移行コストは今が最も小さい。
+- 決定: v2（`@modelcontextprotocol/server`）への移行を試す。scaffold と同じ検証（`initialize`、`tools/list`、`tools/call` の `ping`）が通れば v2 を採用する。通らない、または v2 に重大な問題がある場合は v1 のまま続け、その理由をこのログに追記する。
+- 理由:
+  - v1 は保守系統で、長期の OSS としては保守されている系統の上に積むべき。
+  - 実装が22行のうちに移行するのが最もコストが小さい。状態管理やツールを実装してからでは、書き直しの範囲が広がる。
+  - v2 は 2.4.0 まで進んでおり、初期の不安定さは過ぎている可能性が高い。ただし API は未確認のため、実際に試して判断する。
+- 検討した代替案: v1 のまま進み、移行は必要になってから行う。当面のコストは低いが、移行の負担が後ろに積み上がる。
