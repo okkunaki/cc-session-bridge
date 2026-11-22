@@ -104,17 +104,24 @@
   .why p { max-width: 72ch; }
 
   .diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
-  .diagram svg { display: block; min-width: 920px; width: 100%; height: auto; }
+  .diagram svg { display: block; min-width: 760px; width: 100%; height: auto; }
   svg text { font-family: var(--font-body); }
   .st { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
   .st.add { stroke: var(--warn); stroke-width: 2.5; fill: var(--warn-soft); }
-  .name { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; fill: var(--fg); text-anchor: middle; }
+  .name { font-family: var(--font-mono); font-size: 14px; font-weight: 500; fill: var(--fg); text-anchor: middle; }
   .sub { font-size: 12px; fill: var(--muted); text-anchor: middle; }
   .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
   .arrow.add { stroke: var(--warn); stroke-width: 2; marker-end: url(#aw); }
   .num { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
   .num.add { stroke: var(--warn); }
   .numt { font-family: var(--font-mono); font-size: 12px; font-weight: 500; fill: var(--fg); text-anchor: middle; dominant-baseline: central; }
+  .startdot { fill: var(--fg); }
+  .arrow.tbd { stroke: var(--muted); stroke-dasharray: 5 4; }
+  .sw.tbd { border: 1.5px dashed var(--muted); }
+  .tool { font-family: var(--font-mono); font-size: 14px; font-weight: 500; fill: var(--fg); }
+  .role { font-size: 12px; fill: var(--muted); }
+  .center { font-size: 13px; font-weight: 700; fill: var(--muted); }
+  .center.sm { font-weight: 400; font-size: 12px; }
   .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 10px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
   .legend li { display: flex; align-items: center; gap: 8px; }
   .sw { width: 22px; height: 12px; border-radius: 3px; border: 1.5px solid var(--line); background: var(--surface); flex: none; }
@@ -180,43 +187,72 @@
     <p>仕様書の状態は <span class="mono">idle</span>、<span class="mono">waiting_builder</span>、<span class="mono">waiting_architect</span> の3つで、戻りの遷移は書かれていない。次の図は、4状態にした場合の遷移で、仕様書にない追加分を黄色で示している。</p>
     <p><b>状態名は決定済み（<span class="id">D-012</span>）。</b>主語と動作を名前に入れる。仕様書の <span class="mono">waiting_builder</span> は <span class="mono">awaiting_builder_pickup</span>、<span class="mono">waiting_architect</span> は <span class="mono">awaiting_architect_pickup</span> に対応し、追加する実装中の状態は <span class="mono">builder_working</span> とする。<span class="mono">awaiting ... pickup</span> は「（指示や報告が）〜による受け取りを待っている」の意味。</p>
 
+    <p class="note" style="max-width:none; margin:0;">図の読み方: 箱が<b>状態名</b>。矢印の上の等幅の名前が<b>ツール名</b>で、その下に、呼ぶ側と動作を書いた。矢印の番号は、1往復の順番。</p>
+
     <ul class="legend">
       <li><span class="sw"></span>仕様書にある</li>
       <li><span class="sw add"></span>仕様書にない追加</li>
+      <li><span class="sw tbd"></span>破線は、T3 で決める提案</li>
     </ul>
     <div class="diagram">
-      <svg viewBox="0 0 1020 190" role="img" aria-label="idle から awaiting_builder_pickup、builder_working、awaiting_architect_pickup を経て idle に戻る4状態の遷移図">
+      <svg viewBox="0 0 860 400" role="img" aria-label="4つの状態を、4つのツール呼び出しがつなぐ循環図。idle から send_plan で awaiting_builder_pickup、wait_for_plan で builder_working、send_report で awaiting_architect_pickup、wait_for_report で idle に戻る">
         <defs>
           <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
           <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--warn)"/></marker>
         </defs>
 
-        <rect class="st" x="20" y="80" width="200" height="64" rx="10"/>
-        <text class="name" x="120" y="108">idle</text>
-        <text class="sub" x="120" y="128">タスクなし</text>
+        <circle class="startdot" cx="160" cy="20" r="7"/>
+        <text class="role" x="176" y="24" text-anchor="start">開始</text>
+        <path class="arrow" d="M160 28 V48"/>
 
-        <rect class="st" x="280" y="80" width="200" height="64" rx="10"/>
-        <text class="name" x="380" y="108">awaiting_builder_pickup</text>
-        <text class="sub" x="380" y="128">指示が届いている</text>
+        <rect class="st" x="40" y="50" width="240" height="70" rx="10"/>
+        <text class="name" x="160" y="82">idle</text>
+        <text class="sub" x="160" y="104">タスクなし</text>
 
-        <rect class="st add" x="540" y="80" width="200" height="64" rx="10"/>
-        <text class="name" x="640" y="108">builder_working</text>
-        <text class="sub" x="640" y="128">Builder が実装中</text>
+        <rect class="st" x="580" y="50" width="240" height="70" rx="10"/>
+        <text class="name" x="700" y="82">awaiting_builder_pickup</text>
+        <text class="sub" x="700" y="104">指示が届いている</text>
 
-        <rect class="st" x="800" y="80" width="200" height="64" rx="10"/>
-        <text class="name" x="900" y="108">awaiting_architect_pickup</text>
-        <text class="sub" x="900" y="128">報告が届いている</text>
+        <rect class="st add" x="580" y="260" width="240" height="70" rx="10"/>
+        <text class="name" x="700" y="292">builder_working</text>
+        <text class="sub" x="700" y="314">Builder が実装中</text>
 
-        <path class="arrow" d="M222 112 H278"/>
-        <circle class="num" cx="250" cy="112" r="11"/><text class="numt" x="250" y="112">1</text>
-        <path class="arrow add" d="M482 112 H538"/>
-        <circle class="num add" cx="510" cy="112" r="11"/><text class="numt" x="510" y="112">2</text>
-        <path class="arrow" d="M742 112 H798"/>
-        <circle class="num" cx="770" cy="112" r="11"/><text class="numt" x="770" y="112">3</text>
-        <path class="arrow add" d="M900 78 C900 16 120 16 120 78"/>
-        <circle class="num add" cx="510" cy="34" r="11"/><text class="numt" x="510" y="34">4</text>
+        <rect class="st" x="40" y="260" width="240" height="70" rx="10"/>
+        <text class="name" x="160" y="292">awaiting_architect_pickup</text>
+        <text class="sub" x="160" y="314">報告が届いている</text>
+
+        <path class="arrow" d="M282 85 H578"/>
+        <circle class="num" cx="430" cy="85" r="12"/><text class="numt" x="430" y="85">1</text>
+        <text class="tool" x="430" y="62" text-anchor="middle">send_plan</text>
+        <text class="role" x="430" y="112" text-anchor="middle">Architect が呼ぶ</text>
+        <text class="role" x="430" y="130" text-anchor="middle">送ったら、すぐ戻る</text>
+
+        <path class="arrow add" d="M700 122 V258"/>
+        <circle class="num add" cx="700" cy="190" r="12"/><text class="numt" x="700" y="190">2</text>
+        <text class="tool" x="684" y="168" text-anchor="end">wait_for_plan</text>
+        <text class="role" x="684" y="196" text-anchor="end">Builder が呼ぶ</text>
+        <text class="role" x="684" y="214" text-anchor="end">届くまで待機</text>
+
+        <path class="arrow" d="M578 295 H282"/>
+        <circle class="num" cx="430" cy="295" r="12"/><text class="numt" x="430" y="295">3</text>
+        <text class="tool" x="430" y="272" text-anchor="middle">send_report</text>
+        <text class="role" x="430" y="322" text-anchor="middle">Builder が呼ぶ</text>
+        <text class="role" x="430" y="340" text-anchor="middle">送ったら、すぐ戻る</text>
+
+        <path class="arrow add" d="M160 258 V122"/>
+        <circle class="num add" cx="160" cy="190" r="12"/><text class="numt" x="160" y="190">4</text>
+        <text class="tool" x="176" y="168" text-anchor="start">wait_for_report</text>
+        <text class="role" x="176" y="196" text-anchor="start">Architect が呼ぶ</text>
+        <text class="role" x="176" y="214" text-anchor="start">届くまで待機</text>
+
+        <text class="center" x="430" y="186" text-anchor="middle">1往復の流れ</text>
+        <text class="center sm" x="430" y="206" text-anchor="middle">4 のあと、1 に戻る</text>
+        <path class="arrow tbd" d="M660 332 C660 366 740 366 740 332"/>
+        <text class="role" x="820" y="366" text-anchor="end">再開（T3 で決める）</text>
+        <text class="role" x="820" y="384" text-anchor="end">wait_for_plan が同じ指示を返す</text>
       </svg>
     </div>
+    <p class="note" style="max-width:none; margin:0;">どの状態でも: 遷移表に合わない呼び出しは、<span class="mono">error</span> を返し、状態を変えない（<span class="id">D-015</span>）。例: <span class="mono">builder_working</span> のときの <span class="mono">send_plan</span>。</p>
 
     <div class="scroll">
       <table>
