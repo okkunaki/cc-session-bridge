@@ -119,3 +119,13 @@
   - 実装が22行のうちに移行するのが最もコストが小さい。状態管理やツールを実装してからでは、書き直しの範囲が広がる。
   - v2 は 2.4.0 まで進んでおり、初期の不安定さは過ぎている可能性が高い。ただし API は未確認のため、実際に試して判断する。
 - 検討した代替案: v1 のまま進み、移行は必要になってから行う。当面のコストは低いが、移行の負担が後ろに積み上がる。
+- 結果（2026-11-22）: v2 に移行できた。コミットは 454a8f5。**v2 を採用する。D-002 の依存指定（`@modelcontextprotocol/sdk`）は、`@modelcontextprotocol/server` に置き換える。**
+  - 必要なパッケージは `@modelcontextprotocol/server` 2.4.0 のみ。内部依存として `@modelcontextprotocol/core` が入る。stdio トランスポートは同パッケージのサブパス `@modelcontextprotocol/server/stdio` にあり、`@modelcontextprotocol/node`（HTTP アダプタ）は不要。
+  - 要件は Node 20 以上、`zod` 4.2 以上（4.6.7 で足りる）、`"types": ["node"]`。
+  - コードの書き換えは import 2 行のみ。`McpServer`、`registerTool`、`StdioServerTransport`、`server.connect()` の使い方は変わらない。
+  - 検証（`initialize`、`tools/list`、`tools/call` の `ping`）はすべて通った。差分は、`tools/list` の `ping` から `"execution":{"taskSupport":"forbidden"}` がなくなった点のみ。
+  - `package-lock.json` が約1200行減った。依存が軽くなった。
+- 未検証の点:
+  - v2 は新しい protocolVersion（2026-07-28 spec）に対応し、`serveStdio`（新旧プロトコル世代を扱うファクトリ方式）が新設されている。現状は v1 と同じ `server.connect()` 方式で動いており、`serveStdio` には移していない。新しい protocolVersion のクライアントが接続したときの挙動は未検証。
+  - `StdioServerTransport` は stdin の EOF で自分で閉じる（型定義のコメントより）。v1 との差異かは未確認。
+  - Claude Code（VSCode 拡張）からの実接続は、まだ確認していない。
